@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+AUTH_USER_MODEL = "authentification.User"
+
 
 # Application definition
 
@@ -40,8 +42,8 @@ INSTALLED_APPS = [
     # DjangoDRF
     'rest_framework',
     # My apps
-    'todos.app.TodosConfig',
-    'authentification',
+    'todos.apps.TodosConfig',
+    'authentification.apps.AuthentificationConfig',
     
 ]
 
