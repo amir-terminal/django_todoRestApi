@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib import auth
 from django.contrib.auth.models import PermissionsMixin,AbstractBaseUser, UserManager
-from datetime import timezone
+from django.utils import timezone
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from helpers.models import TrackingModel
 # Create your models here.
@@ -22,12 +22,12 @@ class MyUserManager(UserManager):
         user.save(using=self._db)
         return user
 
-    def create_user(self, username, email=None, password=None, **extra_fields):
+    def create_user(self, username, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
         return self._create_user(username, email, password, **extra_fields)
 
-    def create_superuser(self, username, email=None, password=None, **extra_fields):
+    def create_superuser(self, username, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -108,4 +108,7 @@ class User(AbstractBaseUser,PermissionsMixin,TrackingModel):
     EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['username','email']
-
+    
+    @property
+    def token(self):
+        pass
