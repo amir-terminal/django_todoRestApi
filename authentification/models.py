@@ -1,20 +1,26 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib import auth
-from django.contrib.auth.models import PermissionsMixin,AbstractBaseUser, UserManager
+from django.contrib.auth.models import PermissionsMixin, AbstractBaseUser, UserManager
 from django.utils import timezone
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from helpers.models import TrackingModel
+import jwt
+from datetime import datetime, timedelta
+from core import settings
 # Create your models here.
 
+
 class MyUserManager(UserManager):
-    
+
     def _create_user(self, username, email, password, **extra_fields):
         """
         Create and save a user with the given username, email, and password.
         """
         if not username:
             raise ValueError('The given username must be set')
+        if not email:
+            raise ValueError('The given email must be set')
         email = self.normalize_email(email)
         username = self.model.normalize_username(username)
         user = self.model(username=username, email=email, **extra_fields)
@@ -38,35 +44,8 @@ class MyUserManager(UserManager):
 
         return self._create_user(username, email, password, **extra_fields)
 
-    def with_perm(self, perm, is_active=True, include_superusers=True, backend=None, obj=None):
-        if backend is None:
-            backends = auth._get_backends(return_tuples=True)
-            if len(backends) == 1:
-                backend, _ = backends[0]
-            else:
-                raise ValueError(
-                    'You have multiple authentication backends configured and '
-                    'therefore must provide the `backend` argument.'
-                )
-        elif not isinstance(backend, str):
-            raise TypeError(
-                'backend must be a dotted import path string (got %r).'
-                % backend
-            )
-        else:
-            backend = auth.load_backend(backend)
-        if hasattr(backend, 'with_perm'):
-            return backend.with_perm(
-                perm,
-                is_active=is_active,
-                include_superusers=include_superusers,
-                obj=obj,
-            )
-        return self.none()
 
-
-
-class User(AbstractBaseUser,PermissionsMixin,TrackingModel):
+class User(AbstractBaseUser, PermissionsMixin, TrackingModel):
     """
     An abstract base class implementing a fully featured User model with
     admin-compliant permissions.
@@ -79,19 +58,22 @@ class User(AbstractBaseUser,PermissionsMixin,TrackingModel):
         _('username'),
         max_length=150,
         unique=True,
-        help_text=_('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
+        help_text=_(
+            'Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
         validators=[username_validator],
         error_messages={
             'unique': _("A user with that username already exists."),
         },
     )
+
     first_name = models.CharField(_('first name'), max_length=150, blank=True)
     last_name = models.CharField(_('last name'), max_length=150, blank=True)
-    email = models.EmailField(_('email address'), blank=False)
+    email = models.EmailField(_('email address'), blank=False, unique=True)
     is_staff = models.BooleanField(
         _('staff status'),
         default=False,
-        help_text=_('Designates whether the user can log into this admin site.'),
+        help_text=_(
+            'Designates whether the user can log into this admin site.'),
     )
     is_active = models.BooleanField(
         _('active'),
@@ -106,9 +88,14 @@ class User(AbstractBaseUser,PermissionsMixin,TrackingModel):
     objects = MyUserManager()
 
     EMAIL_FIELD = 'email'
-    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['username','email']
-    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+
     @property
     def token(self):
-        pass
+        token = jwt.encode({"username": self.username, "email": self.email, "exp": datetime.utcnow(
+        )+timedelta(hours=24)}, algorithm='HS256', key=settings.SECRET_KEY)
+        return token
+    
+    def __str__(self):
+        return self.username

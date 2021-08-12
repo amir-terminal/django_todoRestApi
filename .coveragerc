@@ -1,0 +1,8 @@
+[run]
+source=authentification/,todos/,helpers/,
+omit=
+    venv
+    */migrations/*
+    */tests/*
+    */__init__.py
+    */htmlcov/*
